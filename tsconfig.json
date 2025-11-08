@@ -29,6 +29,6 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-  ],
+, "app/api/reminders/[id]/route.js", "lib/speech.js"  ],
   "exclude": ["node_modules"]
 }

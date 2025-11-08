@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { startVoiceRecognition } from '@/lib/speech';
 import { extractTextFromFile, extractReminderFromText } from '@/lib/fileUpload';
-import { alarmInstance } from '@/lib/alarm';
+import { startAlarm, cleanupAlarm } from '@/lib/clientAlarm';
 
 type UiReminder = {
   _id?: string;
@@ -57,7 +57,7 @@ const RimixApp = () => {
         const res = await fetch('/api/reminders');
         const data = await res.json();
         if (data?.ok) setReminders(data.data.items);
-      } catch (e) {
+      } catch {
       }
     };
     load();
@@ -81,8 +81,11 @@ const RimixApp = () => {
   };
 
   const playChime = () => {
+    if (typeof window === 'undefined') return;
+    
     try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const ctx = new AudioContextClass();
       const o = ctx.createOscillator();
       const g = ctx.createGain();
       o.type = 'sine';
@@ -108,9 +111,9 @@ const RimixApp = () => {
     } catch {}
   };
 
-  const triggerReminderEffects = (r: UiReminder) => {
+  const triggerReminderEffects = React.useCallback((r: UiReminder) => {
     if (hasCustomAlarm) {
-      alarmInstance.start(() => {
+      startAlarm(() => {
         console.log('Reminder alarm dismissed by user:', r.title);
       });
     } else if (crazyMode) {
@@ -137,11 +140,13 @@ const RimixApp = () => {
         } catch {}
       }
     }
-  };
+  }, [hasCustomAlarm, crazyMode, notificationsEnabled]);
 
   useEffect(() => {
     return () => {
-      alarmInstance.cleanup();
+      if (typeof window !== 'undefined') {
+        cleanupAlarm();
+      }
     };
   }, []);
 
@@ -171,7 +176,7 @@ const RimixApp = () => {
     const intervalId = setInterval(checkReminders, 5000);
 
     return () => clearInterval(intervalId);
-  }, [reminders, hasCustomAlarm, crazyMode, notificationsEnabled]);
+  }, [reminders, hasCustomAlarm, crazyMode, notificationsEnabled, triggerReminderEffects]);
 
   const filteredReminders = reminders.filter(reminder =>
     reminder.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -664,9 +669,9 @@ const RimixApp = () => {
 
             <div
               onClick={() => {
+                if (typeof window === 'undefined') return;
                 setHasCustomAlarm(true);
-                // Update the triggerReminderEffects function to use the custom alarm
-                alarmInstance.start(() => {
+                startAlarm(() => {
                   console.log('Alarm dismissed by user');
                 });
               }}
