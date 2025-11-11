@@ -176,24 +176,39 @@ class AudioAlarm {
     this.modulationInterval = window.setInterval(() => {
       if (!this.context) return;
       const now = this.context.currentTime;
-      
+
+      try {
+        mainOsc.frequency.cancelScheduledValues(now);
+      } catch {}
+      try {
+        secondOsc.frequency.cancelScheduledValues(now);
+      } catch {}
+      this.gains.forEach((gain) => {
+        try {
+          gain.gain.cancelScheduledValues(now);
+        } catch {}
+      });
+
+      const scheduleStart = now + 0.02;
+      const duration = 0.48;
+
       mainOsc.frequency.setValueCurveAtTime(
         [440, 880, 440, 880, 440],
-        now,
-        0.5
-      );
-      
-      secondOsc.frequency.setValueCurveAtTime(
-        [554.37, 1108.74, 554.37, 1108.74, 554.37],
-        now,
-        0.5
+        scheduleStart,
+        duration
       );
 
-      this.gains.forEach(gain => {
+      secondOsc.frequency.setValueCurveAtTime(
+        [554.37, 1108.74, 554.37, 1108.74, 554.37],
+        scheduleStart,
+        duration
+      );
+
+      this.gains.forEach((gain) => {
         gain.gain.setValueCurveAtTime(
           [0.3, 0.1, 0.3, 0.1, 0.3],
-          now,
-          0.5
+          scheduleStart,
+          duration
         );
       });
     }, 500);
@@ -231,7 +246,7 @@ class AudioAlarm {
       try {
         osc.stop();
         osc.disconnect();
-      } catch (e) {
+      } catch {
       }
     });
     this.oscillators = [];

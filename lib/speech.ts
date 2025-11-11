@@ -7,6 +7,43 @@ interface SpeechData {
   category?: string;
 }
 
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+}
+
+interface SpeechRecognitionResultList {
+  [index: number]: SpeechRecognitionResult;
+  length: number;
+}
+
+interface SpeechRecognitionResult {
+  [index: number]: SpeechRecognitionAlternative;
+  isFinal: boolean;
+  length: number;
+}
+
+interface SpeechRecognitionAlternative {
+  transcript: string;
+  confidence: number;
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onstart: ((event: Event) => void) | null;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
+  onend: ((event: Event) => void) | null;
+  start(): void;
+  stop(): void;
+  abort(): void;
+}
+
 interface IWindow extends Window {
   webkitSpeechRecognition: new () => SpeechRecognition;
 }
@@ -52,7 +89,7 @@ export function startVoiceRecognition(): Promise<SpeechData> {
 
     try {
       recognition.start();
-    } catch (error) {
+    } catch {
       reject(new Error('Failed to start speech recognition. Please try again.'));
     }
   });
@@ -104,7 +141,7 @@ function parseTime12to24(timeStr: string): string | null {
   const match = timeStr.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i);
   if (!match) return null;
 
-  let [, hours, minutes, meridian] = match;
+  const [, hours, minutes, meridian] = match;
   let hour = parseInt(hours, 10);
   
   if (meridian.toLowerCase() === 'pm' && hour !== 12) {
