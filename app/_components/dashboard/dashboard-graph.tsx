@@ -30,7 +30,7 @@ const DashboardGraph = () => {
   return (
     <div>
       <h1 className="font-bold text-[28px] sm:text-[32px] lg:text-[36px] text-neutral-700">
-        Welcome, Sir
+        {/* Welcome Sir */}
       </h1>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-20 mt-12">
         <WeekklySleepDuration />

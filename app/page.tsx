@@ -5,12 +5,14 @@ import {
   Clock, Plus, Search, Edit3, Trash2, Bell, BellOff, 
   Upload, Mic, FileText, Play, Pause, Square, 
   ChevronLeft, ChevronRight, Calendar, CheckSquare, 
-  Timer, Watch, FolderOpen, Music, Volume2, Sun,
-  Moon, Cloud, CloudRain, CloudSnow, CloudDrizzle
+  Timer, Watch, FolderOpen, Music, Sun,
+  Moon, Sparkles, Zap, Target, BarChart3
 } from 'lucide-react';
 import { startVoiceRecognition } from '@/lib/speech';
 import { extractTextFromFile, extractReminderFromText } from '@/lib/fileUpload';
 import { startAlarm, cleanupAlarm } from '@/lib/clientAlarm';
+import DashboardGraph from '@/app/_components/dashboard/dashboard-graph';
+import DashBoardSuggestion from '@/app/_components/dashboard/dashboard_suggestion';
 
 type UiReminder = {
   _id?: string;
@@ -44,12 +46,20 @@ const RimixApp = () => {
   const [activeTab, setActiveTab] = useState('reminders');
   const [darkMode, setDarkMode] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [crazyMode, setCrazyMode] = useState(true);
+  const [crazyMode] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
   const [hasCustomAlarm, setHasCustomAlarm] = useState(false);
   const firedIdsRef = React.useRef<Set<string>>(new Set());
 
-  const itemsPerPage = 10;
+  const itemsPerPage = 8;
+
+  // Stats for dashboard
+  const stats = {
+    total: reminders.length,
+    completed: reminders.filter(r => r.completed).length,
+    pending: reminders.filter(r => !r.completed).length,
+    highPriority: reminders.filter(r => r.priority === 'high' && !r.completed).length,
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -218,8 +228,8 @@ const RimixApp = () => {
         const data = await res.json();
         if (data?.ok) setReminders([data.data, ...reminders]);
       }
-    } catch (e) {
-    }
+  } catch {
+  }
     setIsModalOpen(false);
     setNewReminder({
       title: '',
@@ -320,125 +330,249 @@ const RimixApp = () => {
   };
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'bg-gray-900 text-white' : 'bg-gradient-to-br from-amber-50 to-orange-50 text-gray-800'}`}>
+    <div className={`min-h-screen transition-all duration-500 ${darkMode ? 'bg-gradient-to-br from-gray-900 to-gray-800 text-white' : 'bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 text-gray-800'}`}>
       {/* Header */}
-      <header className={`p-6 transition-colors duration-300 ${darkMode ? 'bg-gray-800' : 'bg-gradient-to-r from-amber-400 to-orange-500'} rounded-b-2xl shadow-lg`}>
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className={`p-3 rounded-xl ${darkMode ? 'bg-gray-700' : 'bg-white bg-opacity-20'}`}>
-              <Clock size={32}  />
+      <header className={`mx-auto p-6 transition-all duration-500 ${darkMode ? 'bg-gradient-to-r from-gray-800 to-gray-900 shadow-2xl' : 'bg-gradient-to-r from-amber-500 to-orange-600 shadow-xl'} relative overflow-hidden`}>
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="max-w-7xl mx-auto flex items-center justify-between relative z-10">
+          <div className="flex items-center space-x-4">
+            <div className={`p-3 rounded-2xl ${darkMode ? 'bg-gray-700/50 backdrop-blur-sm' : 'bg-white/20 backdrop-blur-sm'} shadow-lg`}>
+              <Clock size={32} className={darkMode ? 'text-amber-400' : 'text-white'} />
             </div>
-            <h1 className="text-3xl font-bold text-white">Rimix</h1>
+            <div>
+              <h1 className="text-4xl font-bold text-white">Rimix</h1>
+              <p className={`text-sm ${darkMode ? 'text-amber-200' : 'text-amber-100'}`}>Smart Reminders & Productivity</p>
+            </div>
           </div>
           
           <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3 bg-black/20 backdrop-blur-sm rounded-2xl px-4 py-2">
               {getWeatherIcon()}
-              <span className="text-white">{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              <span className="text-white font-medium">{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
             </div>
             
             <button 
               onClick={() => setDarkMode(!darkMode)}
-              className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-yellow-300' : 'bg-amber-100 text-amber-700'}`}
+              className={`p-3 rounded-2xl transition-all duration-300 shadow-lg ${
+                darkMode 
+                  ? 'bg-amber-500/20 text-yellow-300 hover:bg-amber-500/30' 
+                  : 'bg-white/20 text-amber-700 hover:bg-white/30'
+              } backdrop-blur-sm`}
             >
               {darkMode ? <Sun size={20} /> : <Moon size={20} />}
             </button>
             
             <button 
               onClick={() => setIsModalOpen(true)}
-              className="bg-white text-orange-600 hover:bg-amber-50 font-semibold py-2 px-4 rounded-lg flex items-center space-x-2 transition-all duration-200 shadow-md"
+              className="bg-white text-orange-600 hover:bg-amber-50 font-bold py-3 px-6 rounded-2xl flex items-center space-x-3 transition-all duration-300 shadow-lg hover:scale-105 hover:shadow-xl"
             >
-              <Plus size={20} />
+              <Plus size={22} />
               <span>New Reminder</span>
+              <Sparkles size={16} className="text-amber-500" />
             </button>
+            
             <button 
               onClick={() => setNotificationsEnabled((v) => !v)}
-              className={`py-2 px-3 rounded-lg flex items-center space-x-2 transition-all duration-200 shadow-md ${notificationsEnabled ? 'bg-green-500 text-white' : (darkMode ? 'bg-gray-700 text-gray-200' : 'bg-white text-gray-700')}`}
+              className={`p-3 rounded-2xl flex items-center space-x-2 transition-all duration-300 shadow-lg backdrop-blur-sm ${
+                notificationsEnabled 
+                  ? 'bg-green-500 text-white hover:bg-green-600' 
+                  : darkMode 
+                    ? 'bg-gray-700/50 text-gray-200 hover:bg-gray-700' 
+                    : 'bg-white/20 text-gray-700 hover:bg-white/30'
+              }`}
               title="Enable desktop notifications"
             >
               {notificationsEnabled ? <Bell size={18} /> : <BellOff size={18} />}
-              <span className="hidden sm:inline">Notify</span>
             </button>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto p-6">
+      <main className="max-w-7xl mx-auto p-6">
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className={`rounded-2xl p-6 shadow-lg backdrop-blur-sm transition-all duration-300 ${
+            darkMode ? 'bg-gray-800/50 border border-gray-700' : 'bg-white/80 border border-amber-100'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className={`text-sm font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total Reminders</p>
+                <p className="text-3xl font-bold mt-2">{stats.total}</p>
+              </div>
+              <div className={`p-3 rounded-xl ${darkMode ? 'bg-amber-500/20' : 'bg-amber-100'}`}>
+                <Target className={darkMode ? 'text-amber-400' : 'text-amber-600'} size={24} />
+              </div>
+            </div>
+          </div>
+
+          <div className={`rounded-2xl p-6 shadow-lg backdrop-blur-sm transition-all duration-300 ${
+            darkMode ? 'bg-gray-800/50 border border-gray-700' : 'bg-white/80 border border-green-100'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className={`text-sm font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Completed</p>
+                <p className="text-3xl font-bold mt-2 text-green-500">{stats.completed}</p>
+              </div>
+              <div className={`p-3 rounded-xl ${darkMode ? 'bg-green-500/20' : 'bg-green-100'}`}>
+                <CheckSquare className={darkMode ? 'text-green-400' : 'text-green-600'} size={24} />
+              </div>
+            </div>
+          </div>
+
+          <div className={`rounded-2xl p-6 shadow-lg backdrop-blur-sm transition-all duration-300 ${
+            darkMode ? 'bg-gray-800/50 border border-gray-700' : 'bg-white/80 border border-blue-100'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className={`text-sm font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Pending</p>
+                <p className="text-3xl font-bold mt-2 text-blue-500">{stats.pending}</p>
+              </div>
+              <div className={`p-3 rounded-xl ${darkMode ? 'bg-blue-500/20' : 'bg-blue-100'}`}>
+                <Clock className={darkMode ? 'text-blue-400' : 'text-blue-600'} size={24} />
+              </div>
+            </div>
+          </div>
+
+          <div className={`rounded-2xl p-6 shadow-lg backdrop-blur-sm transition-all duration-300 ${
+            darkMode ? 'bg-gray-800/50 border border-gray-700' : 'bg-white/80 border border-red-100'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className={`text-sm font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>High Priority</p>
+                <p className="text-3xl font-bold mt-2 text-red-500">{stats.highPriority}</p>
+              </div>
+              <div className={`p-3 rounded-xl ${darkMode ? 'bg-red-500/20' : 'bg-red-100'}`}>
+                <Zap className={darkMode ? 'text-red-400' : 'text-red-600'} size={24} />
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Tabs */}
-        <div className={`flex mb-8 rounded-xl overflow-hidden shadow-md ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-          <button
-            className={`flex-1 py-4 font-medium flex items-center justify-center space-x-2 ${activeTab === 'reminders' ? (darkMode ? 'bg-amber-600' : 'bg-amber-500 text-white') : (darkMode ? 'bg-gray-700' : 'bg-amber-100 text-amber-700')}`}
-            onClick={() => setActiveTab('reminders')}
-          >
-            <Clock size={20} />
-            <span>Reminders</span>
-          </button>
-          <button
-            className={`flex-1 py-4 font-medium flex items-center justify-center space-x-2 ${activeTab === 'stopwatch' ? (darkMode ? 'bg-amber-600' : 'bg-amber-500 text-white') : (darkMode ? 'bg-gray-700' : 'bg-amber-100 text-amber-700')}`}
-            onClick={() => setActiveTab('stopwatch')}
-          >
-            <Watch size={20} />
-            <span>Stopwatch</span>
-          </button>
-          <button
-            className={`flex-1 py-4 font-medium flex items-center justify-center space-x-2 ${activeTab === 'timer' ? (darkMode ? 'bg-amber-600' : 'bg-amber-500 text-white') : (darkMode ? 'bg-gray-700' : 'bg-amber-100 text-amber-700')}`}
-            onClick={() => setActiveTab('timer')}
-          >
-            <Timer size={20} />
-            <span>Timer</span>
-          </button>
+        <div className={`flex mb-8 rounded-2xl overflow-hidden shadow-xl ${darkMode ? 'bg-gray-800/50 backdrop-blur-sm' : 'bg-white/80 backdrop-blur-sm'} border ${darkMode ? 'border-gray-700' : 'border-amber-100'}`}>
+          {[
+            { id: 'reminders', label: 'Reminders', icon: Clock },
+            { id: 'stopwatch', label: 'Stopwatch', icon: Watch },
+            { id: 'timer', label: 'Timer', icon: Timer }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              className={`flex-1 py-5 font-semibold flex items-center justify-center space-x-3 transition-all duration-300 ${
+                activeTab === tab.id 
+                  ? (darkMode ? 'bg-amber-600 shadow-inner' : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-inner') 
+                  : (darkMode ? 'bg-transparent hover:bg-gray-700/50' : 'bg-transparent hover:bg-amber-50 text-amber-700')
+              }`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              <tab.icon size={22} />
+              <span className="text-lg">{tab.label}</span>
+            </button>
+          ))}
         </div>
 
         {activeTab === 'reminders' && (
           <>
+            {/* Dashboard summary */}
+            <div className={`rounded-2xl shadow-xl p-8 mb-8 backdrop-blur-sm border ${
+              darkMode ? 'bg-gray-800/50 border-gray-700' : 'bg-white/80 border-amber-100'
+            }`}>
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start">
+                <div className="xl:col-span-2">
+                  <div className="flex items-center space-x-3 mb-6">
+                    <BarChart3 className={darkMode ? 'text-amber-400' : 'text-amber-600'} size={28} />
+                    <h2 className="text-2xl font-bold">Productivity Analytics</h2>
+                  </div>
+                  <DashboardGraph />
+                </div>
+                <div className="xl:col-span-1">
+                  <div className="flex items-center space-x-3 mb-6">
+                    <Sparkles className={darkMode ? 'text-amber-400' : 'text-amber-600'} size={28} />
+                    <h2 className="text-2xl font-bold">Smart Suggestions</h2>
+                  </div>
+                  <DashBoardSuggestion />
+                </div>
+              </div>
+            </div>
+
             {/* Search Bar */}
-            <div className={`rounded-2xl shadow-md p-4 mb-8 flex items-center ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-              <Search className={`mr-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} size={20} />
+            <div className={`rounded-2xl shadow-lg p-6 mb-8 flex items-center backdrop-blur-sm border ${
+              darkMode ? 'bg-gray-800/50 border-gray-700' : 'bg-white/80 border-amber-100'
+            }`}>
+              <Search className={`mr-4 ${darkMode ? 'text-gray-400' : 'text-amber-500'}`} size={24} />
               <input
                 type="text"
                 placeholder="Search reminders by task or description..."
-                className={`w-full p-2 outline-none ${darkMode ? 'bg-gray-800 text-white' : 'bg-white'}`}
+                className={`w-full p-3 outline-none text-lg bg-transparent placeholder-${
+                  darkMode ? 'gray-500' : 'amber-400'
+                }`}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
 
             {/* Reminders List */}
-            <div className={`rounded-2xl shadow-md overflow-hidden mb-8 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+            <div className={`rounded-2xl shadow-xl overflow-hidden mb-8 backdrop-blur-sm border ${
+              darkMode ? 'bg-gray-800/50 border-gray-700' : 'bg-white/80 border-amber-100'
+            }`}>
               {currentReminders.length > 0 ? (
                 currentReminders.map(reminder => (
-                  <div key={reminder._id || reminder.title} className={`border-b ${darkMode ? 'border-gray-700' : 'border-amber-100'} p-5 ${reminder.completed ? (darkMode ? 'bg-gray-700 bg-opacity-50' : 'bg-amber-50') : ''}`}>
+                  <div 
+                    key={reminder._id || reminder.title} 
+                    className={`border-b p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-md ${
+                      darkMode 
+                        ? `border-gray-700 hover:bg-gray-700/50 ${reminder.completed ? 'bg-gray-700/30' : ''}`
+                        : `border-amber-100 hover:bg-amber-50/50 ${reminder.completed ? 'bg-amber-50/70' : ''}`
+                    }`}
+                  >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-5">
                         <button 
                           onClick={() => handleToggleReminder(reminder._id as string)}
-                          className={`p-2 rounded-full ${reminder.completed ? (darkMode ? 'bg-green-700' : 'bg-green-100 text-green-600') : (darkMode ? 'bg-gray-700' : 'bg-amber-100 text-amber-600')}`}
+                          className={`p-3 rounded-2xl transition-all duration-300 ${
+                            reminder.completed 
+                              ? (darkMode ? 'bg-green-600/30 text-green-400' : 'bg-green-100 text-green-600') 
+                              : (darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-amber-100 hover:bg-amber-200 text-amber-600')
+                          }`}
                         >
-                          {reminder.completed ? <CheckSquare size={20} /> : <Square size={20} />}
+                          {reminder.completed ? <CheckSquare size={22} /> : <Square size={22} />}
                         </button>
-                        <div>
-                          <h3 className={`font-semibold ${reminder.completed ? 'line-through text-gray-500' : ''}`}>
+                        <div className="flex-1">
+                          <h3 className={`text-xl font-semibold mb-2 ${reminder.completed ? 'line-through opacity-70' : ''}`}>
                             {reminder.title}
                           </h3>
-                          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{reminder.description}</p>
-                          <div className="flex items-center space-x-4 mt-2">
-                            <span className={`text-xs flex items-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                              <Calendar size={14} className="mr-1" />
-                              {reminder.date}
-                            </span>
-                            <span className={`text-xs flex items-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                              <Clock size={14} className="mr-1" />
-                              {reminder.time}
-                            </span>
-                            <span className={`text-xs px-2 py-1 rounded-full ${
-                              reminder.priority === 'high' ? 'bg-red-100 text-red-800' :
-                              reminder.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-green-100 text-green-800'
+                          {reminder.description && (
+                            <p className={`text-lg mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                              {reminder.description}
+                            </p>
+                          )}
+                          <div className="flex items-center space-x-4 flex-wrap gap-2">
+                            {reminder.date && (
+                              <span className={`text-sm flex items-center px-3 py-1 rounded-full ${
+                                darkMode ? 'bg-gray-700 text-gray-300' : 'bg-amber-100 text-amber-700'
+                              }`}>
+                                <Calendar size={14} className="mr-2" />
+                                {reminder.date}
+                              </span>
+                            )}
+                            {reminder.time && (
+                              <span className={`text-sm flex items-center px-3 py-1 rounded-full ${
+                                darkMode ? 'bg-gray-700 text-gray-300' : 'bg-amber-100 text-amber-700'
+                              }`}>
+                                <Clock size={14} className="mr-2" />
+                                {reminder.time}
+                              </span>
+                            )}
+                            <span className={`text-sm px-3 py-1 rounded-full font-medium ${
+                              reminder.priority === 'high' ? 'bg-red-500/20 text-red-300 border border-red-500/30' :
+                              reminder.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' :
+                              'bg-green-500/20 text-green-300 border border-green-500/30'
                             }`}>
                               {reminder.priority}
                             </span>
-                            <span className={`text-xs px-2 py-1 rounded-full ${darkMode ? 'bg-blue-800 text-blue-100' : 'bg-blue-100 text-blue-800'}`}>
+                            <span className={`text-sm px-3 py-1 rounded-full font-medium ${
+                              darkMode ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-blue-100 text-blue-700'
+                            }`}>
                               {reminder.category}
                             </span>
                           </div>
@@ -447,81 +581,98 @@ const RimixApp = () => {
                       <div className="flex space-x-2">
                         <button 
                           onClick={() => handleEditReminder(reminder)}
-                          className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-700 text-blue-400' : 'hover:bg-blue-50 text-blue-500'}`}
+                          className={`p-3 rounded-2xl transition-all duration-300 ${
+                            darkMode 
+                              ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30' 
+                              : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                          }`}
                         >
-                          <Edit3 size={18} />
+                          <Edit3 size={20} />
                         </button>
                         <button 
                           onClick={() => handleDeleteReminder(reminder._id as string)}
-                          className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-700 text-red-400' : 'hover:bg-red-50 text-red-500'}`}
+                          className={`p-3 rounded-2xl transition-all duration-300 ${
+                            darkMode 
+                              ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' 
+                              : 'bg-red-100 text-red-600 hover:bg-red-200'
+                          }`}
                         >
-                          <Trash2 size={18} />
-                        </button>
-                        <button className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-700 text-purple-400' : 'hover:bg-purple-50 text-purple-500'}`}>
-                          <Bell size={18} />
+                          <Trash2 size={20} />
                         </button>
                       </div>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="p-8 text-center text-gray-500">
-                  <FolderOpen size={48} className="mx-auto mb-4 text-amber-400" />
-                  <p>No reminders found. Create your first reminder!</p>
+                <div className="p-12 text-center">
+                  <FolderOpen size={64} className="mx-auto mb-4 text-amber-400 opacity-50" />
+                  <p className="text-xl text-gray-500 mb-2">No reminders found</p>
+                  <p className="text-gray-400">Create your first reminder to get started!</p>
                 </div>
               )}
             </div>
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex justify-center items-center space-x-4 mb-8">
+              <div className="flex justify-center items-center space-x-6 mb-8">
                 <button 
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className={`p-2 rounded-full shadow-md disabled:opacity-30 ${darkMode ? 'bg-gray-700' : 'bg-white'}`}
+                  className={`p-4 rounded-2xl shadow-lg transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed ${
+                    darkMode 
+                      ? 'bg-gray-700 hover:bg-gray-600 text-white' 
+                      : 'bg-white hover:bg-amber-50 text-amber-700 border border-amber-200'
+                  }`}
                 >
-                  <ChevronLeft size={20} />
+                  <ChevronLeft size={24} />
                 </button>
-                <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
+                <span className={`text-lg font-semibold ${darkMode ? 'text-gray-300' : 'text-amber-700'}`}>
                   Page {currentPage} of {totalPages}
                 </span>
                 <button 
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className={`p-2 rounded-full shadow-md disabled:opacity-30 ${darkMode ? 'bg-gray-700' : 'bg-white'}`}
+                  className={`p-4 rounded-2xl shadow-lg transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed ${
+                    darkMode 
+                      ? 'bg-gray-700 hover:bg-gray-600 text-white' 
+                      : 'bg-white hover:bg-amber-50 text-amber-700 border border-amber-200'
+                  }`}
                 >
-                  <ChevronRight size={20} />
+                  <ChevronRight size={24} />
                 </button>
               </div>
             )}
           </>
         )}
 
+        {/* Stopwatch Tab */}
         {activeTab === 'stopwatch' && (
-          <div className={`rounded-2xl shadow-md p-8 text-center mb-8 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-            <h2 className="text-2xl font-bold mb-6 flex items-center justify-center">
-              <Watch className="mr-2 text-amber-500" size={28} />
+          <div className={`rounded-2xl shadow-xl p-12 text-center mb-8 backdrop-blur-sm border ${
+            darkMode ? 'bg-gray-800/50 border-gray-700' : 'bg-white/80 border-amber-100'
+          }`}>
+            <h2 className="text-3xl font-bold mb-8 flex items-center justify-center">
+              <Watch className="mr-3 text-amber-500" size={32} />
               Stopwatch
             </h2>
-            <div className={`text-6xl font-mono font-bold mb-8 ${darkMode ? 'text-amber-400' : 'text-amber-600'}`}>
+            <div className={`text-7xl font-mono font-bold mb-12 ${darkMode ? 'text-amber-400' : 'text-amber-600'}`}>
               {formatStopwatchTime(stopwatchTime)}
             </div>
-            <div className="flex justify-center space-x-4">
+            <div className="flex justify-center space-x-6">
               {!stopwatchRunning ? (
                 <button 
                   onClick={() => setStopwatchRunning(true)}
-                  className="bg-green-500 hover:bg-green-600 text-white py-3 px-6 rounded-lg flex items-center space-x-2 shadow-md"
+                  className="bg-green-500 hover:bg-green-600 text-white py-4 px-8 rounded-2xl flex items-center space-x-3 shadow-lg hover:scale-105 transition-all duration-300"
                 >
-                  <Play size={20} />
-                  <span>Start</span>
+                  <Play size={24} />
+                  <span className="text-lg">Start</span>
                 </button>
               ) : (
                 <button 
                   onClick={() => setStopwatchRunning(false)}
-                  className="bg-red-500 hover:bg-red-600 text-white py-3 px-6 rounded-lg flex items-center space-x-2 shadow-md"
+                  className="bg-red-500 hover:bg-red-600 text-white py-4 px-8 rounded-2xl flex items-center space-x-3 shadow-lg hover:scale-105 transition-all duration-300"
                 >
-                  <Pause size={20} />
-                  <span>Pause</span>
+                  <Pause size={24} />
+                  <span className="text-lg">Pause</span>
                 </button>
               )}
               <button 
@@ -529,51 +680,60 @@ const RimixApp = () => {
                   setStopwatchRunning(false);
                   setStopwatchTime(0);
                 }}
-                className="bg-gray-500 hover:bg-gray-600 text-white py-3 px-6 rounded-lg flex items-center space-x-2 shadow-md"
+                className="bg-gray-500 hover:bg-gray-600 text-white py-4 px-8 rounded-2xl flex items-center space-x-3 shadow-lg hover:scale-105 transition-all duration-300"
               >
-                <Square size={20} />
-                <span>Reset</span>
+                <Square size={24} />
+                <span className="text-lg">Reset</span>
               </button>
             </div>
           </div>
         )}
 
+        {/* Timer Tab */}
         {activeTab === 'timer' && (
-          <div className={`rounded-2xl shadow-md p-8 text-center mb-8 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-            <h2 className="text-2xl font-bold mb-6 flex items-center justify-center">
-              <Timer className="mr-2 text-amber-500" size={28} />
+          <div className={`rounded-2xl shadow-xl p-12 text-center mb-8 backdrop-blur-sm border ${
+            darkMode ? 'bg-gray-800/50 border-gray-700' : 'bg-white/80 border-amber-100'
+          }`}>
+            <h2 className="text-3xl font-bold mb-8 flex items-center justify-center">
+              <Timer className="mr-3 text-amber-500" size={32} />
               Timer
             </h2>
-            <div className={`text-6xl font-mono font-bold mb-8 ${darkMode ? 'text-amber-400' : 'text-amber-600'}`}>
+            <div className={`text-7xl font-mono font-bold mb-12 ${darkMode ? 'text-amber-400' : 'text-amber-600'}`}>
               {formatTimerTime(timerTime)}
             </div>
-            <div className="mb-6">
-              <label className={`block mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Set Timer (minutes)</label>
+            <div className="mb-8">
+              <label className={`block mb-4 text-lg font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                Set Timer (minutes)
+              </label>
               <input
                 type="number"
                 min="1"
                 value={Math.floor(timerTime / 60)}
                 onChange={(e) => setTimerTime(parseInt(e.target.value) * 60)}
-                className={`border rounded-lg p-2 text-center w-32 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-amber-200'}`}
+                className={`border-2 rounded-2xl p-4 text-center text-xl w-40 font-bold ${
+                  darkMode 
+                    ? 'bg-gray-700 border-gray-600 text-white' 
+                    : 'bg-white border-amber-300 text-amber-700'
+                }`}
                 disabled={timerRunning}
               />
             </div>
-            <div className="flex justify-center space-x-4">
+            <div className="flex justify-center space-x-6">
               {!timerRunning ? (
                 <button 
                   onClick={() => setTimerRunning(true)}
-                  className="bg-green-500 hover:bg-green-600 text-white py-3 px-6 rounded-lg flex items-center space-x-2 shadow-md"
+                  className="bg-green-500 hover:bg-green-600 text-white py-4 px-8 rounded-2xl flex items-center space-x-3 shadow-lg hover:scale-105 transition-all duration-300"
                 >
-                  <Play size={20} />
-                  <span>Start</span>
+                  <Play size={24} />
+                  <span className="text-lg">Start</span>
                 </button>
               ) : (
                 <button 
                   onClick={() => setTimerRunning(false)}
-                  className="bg-red-500 hover:bg-red-600 text-white py-3 px-6 rounded-lg flex items-center space-x-2 shadow-md"
+                  className="bg-red-500 hover:bg-red-600 text-white py-4 px-8 rounded-2xl flex items-center space-x-3 shadow-lg hover:scale-105 transition-all duration-300"
                 >
-                  <Pause size={20} />
-                  <span>Pause</span>
+                  <Pause size={24} />
+                  <span className="text-lg">Pause</span>
                 </button>
               )}
               <button 
@@ -581,22 +741,24 @@ const RimixApp = () => {
                   setTimerRunning(false);
                   setTimerTime(300);
                 }}
-                className="bg-gray-500 hover:bg-gray-600 text-white py-3 px-6 rounded-lg flex items-center space-x-2 shadow-md"
+                className="bg-gray-500 hover:bg-gray-600 text-white py-4 px-8 rounded-2xl flex items-center space-x-3 shadow-lg hover:scale-105 transition-all duration-300"
               >
-                <Square size={20} />
-                <span>Reset</span>
+                <Square size={24} />
+                <span className="text-lg">Reset</span>
               </button>
             </div>
           </div>
         )}
 
         {/* File Upload Section */}
-        <div className={`rounded-2xl shadow-md p-6 mb-8 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-          <h2 className="text-xl font-semibold mb-4 flex items-center">
-            <Upload className="mr-2 text-amber-500" size={24} />
-            Attach Files
+        <div className={`rounded-2xl shadow-xl p-8 mb-8 backdrop-blur-sm border ${
+          darkMode ? 'bg-gray-800/50 border-gray-700' : 'bg-white/80 border-amber-100'
+        }`}>
+          <h2 className="text-2xl font-bold mb-6 flex items-center">
+            <Upload className="mr-3 text-amber-500" size={28} />
+            Quick Actions
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div
               onClick={async () => {
                 try {
@@ -619,16 +781,27 @@ const RimixApp = () => {
                   setIsRecording(false);
                 }
               }}
-              className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all duration-300 cursor-pointer hover:scale-105 ${
+              className={`border-3 border-dashed rounded-2xl p-8 text-center transition-all duration-300 cursor-pointer group ${
                 isRecording 
-                  ? 'border-red-500 bg-red-50' 
+                  ? 'border-red-500 bg-red-50 scale-105' 
                   : darkMode 
-                    ? 'border-amber-500 hover:bg-amber-900 hover:bg-opacity-20' 
-                    : 'border-amber-400 hover:bg-amber-50'
+                    ? 'border-amber-500 hover:bg-amber-500/10 hover:scale-105' 
+                    : 'border-amber-400 hover:bg-amber-50 hover:scale-105'
               }`}
             >
-              <Mic className={`mx-auto mb-2 ${isRecording ? 'text-red-500 animate-pulse' : 'text-amber-500'}`} size={32} />
-              <p>{isRecording ? 'Recording...' : 'Record Voice'}</p>
+              <div className={`p-4 rounded-2xl inline-block mb-4 ${
+                isRecording 
+                  ? 'bg-red-100 text-red-500 animate-pulse' 
+                  : darkMode 
+                    ? 'bg-amber-500/20 text-amber-400 group-hover:bg-amber-500/30' 
+                    : 'bg-amber-100 text-amber-500 group-hover:bg-amber-200'
+              }`}>
+                <Mic size={32} />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">{isRecording ? 'Listening...' : 'Voice Reminder'}</h3>
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                {isRecording ? 'Speak now...' : 'Create reminder with voice'}
+              </p>
             </div>
 
             <div
@@ -661,10 +834,23 @@ const RimixApp = () => {
 
                 input.click();
               }}
-              className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all duration-300 cursor-pointer hover:scale-105 ${darkMode ? 'border-amber-500 hover:bg-amber-900 hover:bg-opacity-20' : 'border-amber-400 hover:bg-amber-50'}`}
+              className={`border-3 border-dashed rounded-2xl p-8 text-center transition-all duration-300 cursor-pointer group ${
+                darkMode 
+                  ? 'border-amber-500 hover:bg-amber-500/10 hover:scale-105' 
+                  : 'border-amber-400 hover:bg-amber-50 hover:scale-105'
+              }`}
             >
-              <FileText className="mx-auto text-amber-500 mb-2" size={32} />
-              <p>Upload Document</p>
+              <div className={`p-4 rounded-2xl inline-block mb-4 ${
+                darkMode 
+                  ? 'bg-amber-500/20 text-amber-400 group-hover:bg-amber-500/30' 
+                  : 'bg-amber-100 text-amber-500 group-hover:bg-amber-200'
+              }`}>
+                <FileText size={32} />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">Document Import</h3>
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                Extract reminders from files
+              </p>
             </div>
 
             <div
@@ -675,16 +861,29 @@ const RimixApp = () => {
                   console.log('Alarm dismissed by user');
                 });
               }}
-              className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all duration-300 cursor-pointer hover:scale-105 ${
+              className={`border-3 border-dashed rounded-2xl p-8 text-center transition-all duration-300 cursor-pointer group ${
                 hasCustomAlarm
-                  ? 'border-green-500 bg-green-50'
+                  ? 'border-green-500 bg-green-50 scale-105'
                   : darkMode
-                    ? 'border-amber-500 hover:bg-amber-900 hover:bg-opacity-20'
-                    : 'border-amber-400 hover:bg-amber-50'
+                    ? 'border-amber-500 hover:bg-amber-500/10 hover:scale-105'
+                    : 'border-amber-400 hover:bg-amber-50 hover:scale-105'
               }`}
             >
-              <Music className={`mx-auto mb-2 ${hasCustomAlarm ? 'text-green-500' : 'text-amber-500'}`} size={32} />
-              <p>{hasCustomAlarm ? 'Custom Alarm Added' : 'Add Alarm Sound'}</p>
+              <div className={`p-4 rounded-2xl inline-block mb-4 ${
+                hasCustomAlarm
+                  ? 'bg-green-100 text-green-500'
+                  : darkMode
+                    ? 'bg-amber-500/20 text-amber-400 group-hover:bg-amber-500/30'
+                    : 'bg-amber-100 text-amber-500 group-hover:bg-amber-200'
+              }`}>
+                <Music size={32} />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">
+                {hasCustomAlarm ? 'Alarm Active' : 'Custom Alarm'}
+              </h3>
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                {hasCustomAlarm ? 'Alarm is ready!' : 'Set custom alarm sound'}
+              </p>
             </div>
           </div>
         </div>
@@ -692,72 +891,174 @@ const RimixApp = () => {
 
       {/* Create/Edit Reminder Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className={`rounded-2xl shadow-2xl w-full max-w-md overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-            <div className={`p-4 ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-r from-amber-400 to-orange-500'} text-white`}>
-              <h2 className="text-xl font-semibold">
-                {editingReminder ? 'Edit Reminder' : 'Create New Reminder'}
+        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div
+            className={`w-full max-w-4xl h-[90vh] flex flex-col md:flex-row rounded-3xl shadow-2xl overflow-hidden transform animate-scale-in ${
+              darkMode ? 'bg-gray-800' : 'bg-white'
+            }`}
+          >
+            <div
+              className={`md:w-1/2 p-8 flex flex-col justify-center items-center text-center ${
+                darkMode
+                  ? 'bg-gradient-to-b from-amber-700 to-orange-600 text-white'
+                  : 'bg-gradient-to-b from-amber-400 to-orange-500 text-white'
+              }`}
+            >
+              <h2 className="text-3xl font-bold mb-4">
+                {editingReminder ? 'Edit Reminder' : 'Create Reminder'}
               </h2>
+              <p className="text-lg opacity-90 mb-8">
+                {editingReminder
+                  ? 'Refine your goals and keep your plans up to date.'
+                  : 'Organize your day, set your priorities, and never miss what matters.'}
+              </p>
+
+              <div className="w-40 h-40 rounded-full bg-white/20 flex items-center justify-center">
+                <span className="text-6xl">🧠</span>
+              </div>
             </div>
-            <div className="p-6">
-              <div className="space-y-4">
+
+            <div className="md:w-1/2 h-full overflow-y-auto p-8">
+              <div className="space-y-6">
+                {/* Title */}
                 <div>
-                  <label className={`block mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Title</label>
+                  <label
+                    className={`block mb-3 text-lg font-medium ${
+                      darkMode ? 'text-gray-300' : 'text-gray-700'
+                    }`}
+                  >
+                    Title *
+                  </label>
                   <input
                     type="text"
-                    className={`w-full p-3 rounded-xl ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-amber-50 border-amber-200'} border`}
+                    className={`w-full p-4 rounded-2xl text-lg border-2 transition-all duration-300 ${
+                      darkMode
+                        ? 'bg-gray-700 text-white border-gray-600 focus:border-amber-500'
+                        : 'bg-amber-50 border-amber-200 focus:border-amber-500'
+                    }`}
                     value={newReminder.title}
-                    onChange={(e) => setNewReminder({...newReminder, title: e.target.value})}
+                    onChange={(e) =>
+                      setNewReminder({ ...newReminder, title: e.target.value })
+                    }
+                    placeholder="Enter reminder title"
                   />
                 </div>
+
+                {/* Description */}
                 <div>
-                  <label className={`block mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Description</label>
+                  <label
+                    className={`block mb-3 text-lg font-medium ${
+                      darkMode ? 'text-gray-300' : 'text-gray-700'
+                    }`}
+                  >
+                    Description
+                  </label>
                   <textarea
-                    className={`w-full p-3 rounded-xl ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-amber-50 border-amber-200'} border`}
-                    rows={3}
+                    className={`w-full p-4 rounded-2xl text-lg border-2 transition-all duration-300 ${
+                      darkMode
+                        ? 'bg-gray-700 text-white border-gray-600 focus:border-amber-500'
+                        : 'bg-amber-50 border-amber-200 focus:border-amber-500'
+                    }`}
+                    rows={4}
                     value={newReminder.description}
-                    onChange={(e) => setNewReminder({...newReminder, description: e.target.value})}
+                    onChange={(e) =>
+                      setNewReminder({ ...newReminder, description: e.target.value })
+                    }
+                    placeholder="Add details about your reminder"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+
+                {/* Date & Time */}
+                <div className="grid grid-cols-2 gap-6">
                   <div>
-                    <label className={`block mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Date</label>
+                    <label
+                      className={`block mb-3 text-lg font-medium ${
+                        darkMode ? 'text-gray-300' : 'text-gray-700'
+                      }`}
+                    >
+                      Date
+                    </label>
                     <input
                       type="date"
-                      className={`w-full p-3 rounded-xl ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-amber-50 border-amber-200'} border`}
+                      className={`w-full p-4 rounded-2xl text-lg border-2 transition-all duration-300 ${
+                        darkMode
+                          ? 'bg-gray-700 text-white border-gray-600 focus:border-amber-500'
+                          : 'bg-amber-50 border-amber-200 focus:border-amber-500'
+                      }`}
                       value={newReminder.date}
-                      onChange={(e) => setNewReminder({...newReminder, date: e.target.value})}
+                      onChange={(e) =>
+                        setNewReminder({ ...newReminder, date: e.target.value })
+                      }
                     />
                   </div>
                   <div>
-                    <label className={`block mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Time</label>
+                    <label
+                      className={`block mb-3 text-lg font-medium ${
+                        darkMode ? 'text-gray-300' : 'text-gray-700'
+                      }`}
+                    >
+                      Time
+                    </label>
                     <input
                       type="time"
-                      className={`w-full p-3 rounded-xl ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-amber-50 border-amber-200'} border`}
+                      className={`w-full p-4 rounded-2xl text-lg border-2 transition-all duration-300 ${
+                        darkMode
+                          ? 'bg-gray-700 text-white border-gray-600 focus:border-amber-500'
+                          : 'bg-amber-50 border-amber-200 focus:border-amber-500'
+                      }`}
                       value={newReminder.time}
-                      onChange={(e) => setNewReminder({...newReminder, time: e.target.value})}
+                      onChange={(e) =>
+                        setNewReminder({ ...newReminder, time: e.target.value })
+                      }
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+
+                {/* Priority & Category */}
+                <div className="grid grid-cols-2 gap-6">
                   <div>
-                    <label className={`block mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Priority</label>
+                    <label
+                      className={`block mb-3 text-lg font-medium ${
+                        darkMode ? 'text-gray-300' : 'text-gray-700'
+                      }`}
+                    >
+                      Priority
+                    </label>
                     <select
-                      className={`w-full p-3 rounded-xl ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-amber-50 border-amber-200'} border`}
+                      className={`w-full p-4 rounded-2xl text-lg border-2 transition-all duration-300 ${
+                        darkMode
+                          ? 'bg-gray-700 text-white border-gray-600 focus:border-amber-500'
+                          : 'bg-amber-50 border-amber-200 focus:border-amber-500'
+                      }`}
                       value={newReminder.priority}
-                      onChange={(e) => setNewReminder({...newReminder, priority: e.target.value})}
+                      onChange={(e) =>
+                        setNewReminder({ ...newReminder, priority: e.target.value })
+                      }
                     >
                       <option value="high">High</option>
                       <option value="medium">Medium</option>
                       <option value="low">Low</option>
                     </select>
                   </div>
+
                   <div>
-                    <label className={`block mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Category</label>
+                    <label
+                      className={`block mb-3 text-lg font-medium ${
+                        darkMode ? 'text-gray-300' : 'text-gray-700'
+                      }`}
+                    >
+                      Category
+                    </label>
                     <select
-                      className={`w-full p-3 rounded-xl ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-amber-50 border-amber-200'} border`}
+                      className={`w-full p-4 rounded-2xl text-lg border-2 transition-all duration-300 ${
+                        darkMode
+                          ? 'bg-gray-700 text-white border-gray-600 focus:border-amber-500'
+                          : 'bg-amber-50 border-amber-200 focus:border-amber-500'
+                      }`}
                       value={newReminder.category}
-                      onChange={(e) => setNewReminder({...newReminder, category: e.target.value})}
+                      onChange={(e) =>
+                        setNewReminder({ ...newReminder, category: e.target.value })
+                      }
                     >
                       <option value="Work">Work</option>
                       <option value="Personal">Personal</option>
@@ -767,48 +1068,57 @@ const RimixApp = () => {
                     </select>
                   </div>
                 </div>
-              </div>
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    setEditingReminder(null);
-                    setNewReminder({
-                      title: '',
-                      description: '',
-                      date: '',
-                      time: '',
-                      priority: 'medium',
-                      category: 'Personal'
-                    });
-                  }}
-                  className={`px-4 py-2 rounded-xl ${darkMode ? 'bg-gray-700 text-white' : 'bg-amber-100 text-amber-700'}`}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleCreateReminder}
-                  className="px-4 py-2 bg-amber-500 text-white rounded-xl hover:bg-amber-600 shadow-md"
-                >
-                  {editingReminder ? 'Update' : 'Create'}
-                </button>
+
+                <div className="flex justify-end space-x-4 mt-8">
+                  <button
+                    onClick={() => {
+                      setIsModalOpen(false);
+                      setEditingReminder(null);
+                      setNewReminder({
+                        title: '',
+                        description: '',
+                        date: '',
+                        time: '',
+                        priority: 'medium',
+                        category: 'Personal',
+                      });
+                    }}
+                    className={`px-6 py-3 rounded-2xl text-lg font-medium transition-all duration-300 ${
+                      darkMode
+                        ? 'bg-gray-700 text-white hover:bg-gray-600'
+                        : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                    }`}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCreateReminder}
+                    className="px-6 py-3 bg-amber-500 text-white rounded-2xl text-lg font-medium hover:bg-amber-600 shadow-lg hover:scale-105 transition-all duration-300"
+                  >
+                    {editingReminder ? 'Update Reminder' : 'Create Reminder'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
       )}
 
+
       {/* Footer */}
-      <footer className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-        <p>Made by Aashish</p>
-        <a 
-          href="https://www.linkedin.com" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="text-amber-500 hover:underline inline-flex items-center mt-2"
-        >
-          Connect on LinkedIn
-        </a>
+      <footer className={`text-center py-12 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+        <div className="max-w-7xl mx-auto px-6">
+          <p className="text-lg mb-2">Made with ❤️ by Aashish</p>
+          <a 
+            href="https://www.linkedin.com" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-amber-500 hover:text-amber-400 font-medium inline-flex items-center space-x-2 mt-2 transition-all duration-300 hover:scale-105"
+          >
+            <span>Connect on LinkedIn</span>
+            <Sparkles size={16} />
+          </a>
+        </div>
       </footer>
     </div>
   );
