@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit") || 50)));
 
   const filter: Record<string, unknown> = {};
-  if (q) filter.$text = { $search: q } as any;
+  if (q) Object.assign(filter, { $text: { $search: q } });
   if (completed === "true") filter.completed = true;
   if (completed === "false") filter.completed = false;
 

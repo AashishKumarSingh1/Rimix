@@ -1,14 +1,23 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/mongoose";
-import { jsonError, jsonOk, parseJson } from "@/lib/http";
 import { Reminder } from "@/models/Reminder";
 
-type RouteContext = {
-  params: {
-    id: string;
-  };
-};
+function jsonOk(data: unknown, status = 200) {
+  return NextResponse.json({ ok: true, data }, { status });
+}
+
+function jsonError(message: string, status = 400) {
+  return NextResponse.json({ ok: false, error: message }, { status });
+}
+
+async function parseJson<T>(req: NextRequest): Promise<T | null> {
+  try {
+    return (await req.json()) as T;
+  } catch {
+    return null;
+  }
+}
 
 type UpdateReminderBody = {
   title?: string;
@@ -20,25 +29,18 @@ type UpdateReminderBody = {
   completed?: boolean;
 };
 
-async function getParams(context: any) {
-  if (typeof context.then === "function") {
-    return (await context).params;
-  }
-  return context.params;
-}
-
-export async function GET(_req: NextRequest, context: RouteContext | Promise<RouteContext>) {
-  const params = await getParams(context);
+export async function GET(_req: NextRequest, context: RouteContext<"/api/reminders/[id]">) {
+  const { id } = await context.params; 
   await connectToDatabase();
 
-  const item = await Reminder.findById(params.id).lean();
+  const item = await Reminder.findById(id).lean();
   if (!item) return jsonError("Reminder not found", 404);
 
   return jsonOk(item);
 }
 
-export async function PUT(req: NextRequest, context: RouteContext | Promise<RouteContext>) {
-  const params = await getParams(context);
+export async function PUT(req: NextRequest, context: RouteContext<"/api/reminders/[id]">) {
+  const { id } = await context.params;
   await connectToDatabase();
 
   const body = await parseJson<UpdateReminderBody>(req);
@@ -47,34 +49,32 @@ export async function PUT(req: NextRequest, context: RouteContext | Promise<Rout
   const update: Record<string, unknown> = {};
   if (typeof body.title === "string") update.title = body.title.trim();
   if (typeof body.description === "string") update.description = body.description;
-  if (typeof body.date === "string" || body.date === null)
-    update.date = body.date || undefined;
-  if (typeof body.time === "string" || body.time === null)
-    update.time = body.time || undefined;
+  if (typeof body.date === "string" || body.date === null) update.date = body.date || undefined;
+  if (typeof body.time === "string" || body.time === null) update.time = body.time || undefined;
   if (typeof body.category === "string") update.category = body.category;
   if (typeof body.priority === "string") update.priority = body.priority;
   if (typeof body.completed === "boolean") update.completed = body.completed;
 
-  const item = await Reminder.findByIdAndUpdate(params.id, update, { new: true });
+  const item = await Reminder.findByIdAndUpdate(id, update, { new: true });
   if (!item) return jsonError("Reminder not found", 404);
 
   return jsonOk(item);
 }
 
-export async function PATCH(req: NextRequest, context: RouteContext | Promise<RouteContext>) {
+export async function PATCH(req: NextRequest, context: RouteContext<"/api/reminders/[id]">) {
   return PUT(req, context);
 }
 
-export async function DELETE(_req: NextRequest, context: RouteContext | Promise<RouteContext>) {
-  const params = await getParams(context);
+export async function DELETE(_req: NextRequest, context: RouteContext<"/api/reminders/[id]">) {
+  const { id } = await context.params;
   await connectToDatabase();
 
-  if (!mongoose.Types.ObjectId.isValid(params.id)) {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
     return jsonError("Invalid reminder ID format", 400);
   }
 
   try {
-    const res = await Reminder.findByIdAndDelete(params.id);
+    const res = await Reminder.findByIdAndDelete(id);
     if (!res) return jsonError("Reminder not found", 404);
     return jsonOk({ deleted: true });
   } catch (error) {
