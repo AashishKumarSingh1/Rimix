@@ -12,8 +12,7 @@ import { startVoiceRecognition } from '@/lib/speech';
 import { extractTextFromFile, extractReminderFromText } from '@/lib/fileUpload';
 import { startAlarm, cleanupAlarm } from '@/lib/clientAlarm';
 import DashboardGraph from '@/app/_components/dashboard/dashboard-graph';
-import DashBoardSuggestion from '@/app/_components/dashboard/dashboard_suggestion';
-
+import PersonalizedSuggestion from "@/app/_components/dashboard/personalized_suggestion"
 type UiReminder = {
   _id?: string;
   title: string;
@@ -27,6 +26,7 @@ type UiReminder = {
 
 const RimixApp = () => {
   const [reminders, setReminders] = useState<UiReminder[]>([]);
+  const [sleepData, setSleepData] = useState(null); 
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -483,14 +483,20 @@ const RimixApp = () => {
                     <BarChart3 className={darkMode ? 'text-amber-400' : 'text-amber-600'} size={28} />
                     <h2 className="text-2xl font-bold">Productivity Analytics</h2>
                   </div>
-                  <DashboardGraph />
+                   <DashboardGraph 
+                    reminders={reminders} 
+                    onSleepDataUpdate={setSleepData}
+                  />
                 </div>
-                <div className="xl:col-span-1">
+                <div className="xl:col-span-2">
                   <div className="flex items-center space-x-3 mb-6">
                     <Sparkles className={darkMode ? 'text-amber-400' : 'text-amber-600'} size={28} />
                     <h2 className="text-2xl font-bold">Smart Suggestions</h2>
                   </div>
-                  <DashBoardSuggestion />
+                 <PersonalizedSuggestion 
+                  sleepData={sleepData} 
+                  reminders={reminders} 
+                    />
                 </div>
               </div>
             </div>
